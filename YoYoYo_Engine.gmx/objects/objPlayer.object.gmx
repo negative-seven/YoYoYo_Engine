@@ -170,44 +170,60 @@ if (global.playerAnimationFix)
           <argument>
             <kind>1</kind>
             <string>//check left/right button presses
-var L = (scrButtonCheck(global.leftButton) || (global.directionalTapFix &amp;&amp; scrButtonCheckPressed(global.leftButton)));
-var R = (scrButtonCheck(global.rightButton) || (global.directionalTapFix &amp;&amp; scrButtonCheckPressed(global.rightButton)));
+var holdingLeft = scrButtonCheck(global.leftButton) || (global.directionalTapFix &amp;&amp; scrButtonCheckPressed(global.leftButton));
+var holdingRight = scrButtonCheck(global.rightButton) || (global.directionalTapFix &amp;&amp; scrButtonCheckPressed(global.rightButton));
 
-var h = 0;
-
-if (!frozen)    //don't move if frozen
+var horizontalHeld = 0;
+if !frozen
 {
-    if (R)
-        h = 1;
-    else if (L)
-        h = -1;
+    if holdingRight
+    {
+        horizontalHeld = 1;
+    }
+    else if holdingLeft
+    {
+        horizontalHeld = -1;
+    }
 }
 
 var slipBlockTouching = instance_place(x,y+(1*global.grav),objSlipBlock);   //check if on a slip block
 
 //vine checks
-var notOnBlock = (place_free(x,y+(global.grav)));
-var onVineL = (place_meeting(x-1,y,objWalljumpL) &amp;&amp; notOnBlock);
-var onVineR = (place_meeting(x+1,y,objWalljumpR) &amp;&amp; notOnBlock);
+var onBlock = !place_free(x, y + global.grav);
 
-if (h != 0)  //player is moving
+var vineDirection = 0;
+if !onBlock
 {
-    if (!onVineR &amp;&amp; !onVineL)   //make sure not currently touching a vine
+    if place_meeting(x - 1, y, objWalljumpL)
     {
-        xScale = h;
+        vineDirection = -1;
     }
-    if ((h == -1 &amp;&amp; !onVineR) || (h == 1 &amp;&amp; !onVineL))
+    else if place_meeting(x + 1, y, objWalljumpR)
     {
-        if (slipBlockTouching == noone) //not touching a slip block, move immediately at full speed
+        vineDirection = 1;
+    }
+}
+
+if horizontalHeld != 0  //player is moving
+{
+    if vineDirection == 0   //make sure not currently touching a vine
+    {
+        xScale = horizontalHeld;
+    }
+    if (horizontalHeld == -1 &amp;&amp; vineDirection != 1) || (horizontalHeld == 1 &amp;&amp; vineDirection != -1)
+    {
+        if slipBlockTouching == noone //not touching a slip block, move immediately at full speed
         {
-            hspeed = maxSpeed * h;
+            hspeed = maxSpeed * horizontalHeld;
         }
         else    //touching a slip block, use acceleration
         {
-            hspeed += (slipBlockTouching.slip) * h;
+            hspeed += slipBlockTouching.slip * horizontalHeld;
             
-            if (abs(hspeed) &gt; maxSpeed)
-                hspeed = maxSpeed * h;
+            if abs(hspeed) &gt; maxSpeed
+            {
+                hspeed = maxSpeed * horizontalHeld;
+            }
         }
         
         sprite_index = sprPlayerRunning;
@@ -216,23 +232,29 @@ if (h != 0)  //player is moving
 }
 else    //player is not moving
 {
-    if (slipBlockTouching == noone) //not touching a slip block, stop immediately
+    if (slipBlockTouching == noone)
+    {
         hspeed = 0;
+    }
     else    //touching a slip block, slow down
     {
-        if (hspeed &gt; 0)
+        if hspeed &gt; 0
         {
             hspeed -= slipBlockTouching.slip;
             
-            if (hspeed &lt;= 0)
+            if hspeed &lt;= 0
+            {
                 hspeed = 0;
+            }
         }
-        else if (hspeed &lt; 0)
+        else if hspeed &lt; 0
         {
             hspeed += slipBlockTouching.slip;
             
-            if (hspeed &gt;= 0)
+            if hspeed &gt;= 0
+            {
                 hspeed = 0;
+            }
         }
     }
   
@@ -241,76 +263,93 @@ else    //player is not moving
 }
 
 
-if (!onPlatform)    //check if standing on a platform
+if !onPlatform
 {
-    if((vspeed * global.grav) &lt; -0.05) {sprite_index = sprPlayerJump;}
-    else if((vspeed * global.grav) &gt; 0.05) {sprite_index = sprPlayerFall;}
+    if (vspeed * global.grav) &lt; -0.05
+    {
+        sprite_index = sprPlayerJump;
+    }
+    else if (vspeed * global.grav) &gt; 0.05
+    {
+        sprite_index = sprPlayerFall;
+    }
 }
 else
 {
-    if (!place_meeting(x,y+(4*global.grav),objPlatform)) {onPlatform = false;}
+    if !place_meeting(x,y+(4*global.grav),objPlatform)
+    {
+        onPlatform = false;
+    }
 }
 
-var slideBlockTouching = instance_place(x,y+(global.grav),objSlideBlock);   //check if on a slide block
+var slideBlockTouching = instance_place(x,y+(global.grav),objSlideBlock);
 
-if (slideBlockTouching != noone)    //on a slide block, start moving with it
+if slideBlockTouching != noone
+{
     hspeed += slideBlockTouching.h;
-
-if (abs(vspeed) &gt; maxVspeed) {vspeed = sign(vspeed)*maxVspeed;} //check if moving vertically faster than max speed
-
-if (!frozen)    //check if frozen before doing anything
-{
-    if (scrButtonCheckPressed(global.shootButton))
-        scrPlayerShoot();
-    if (scrButtonCheckPressed(global.jumpButton))
-        scrPlayerJump();
-    if (scrButtonCheckReleased(global.jumpButton))
-        scrPlayerVJump();
-    if (scrButtonCheckPressed(global.suicideButton))
-        scrKillPlayer();
 }
 
-if (global.adAlign &amp;&amp; place_meeting(x,y+(global.grav),objBlock) &amp;&amp; !frozen)  // A/D align
+if abs(vspeed) &gt; maxVspeed
 {
-    if (scrButtonCheckPressed(global.alignLeftButton)) {hspeed -= 1;}
-    if (scrButtonCheckPressed(global.alignRightButton)) {hspeed += 1;}
+    vspeed = sign(vspeed) * maxVspeed;
+}
+
+if !frozen
+{
+    if scrButtonCheckPressed(global.shootButton)
+    {
+        scrPlayerShoot();
+    }
+    if scrButtonCheckPressed(global.jumpButton)
+    {
+        scrPlayerJump();
+    }
+    if scrButtonCheckReleased(global.jumpButton)
+    {
+        scrPlayerVJump();
+    }
+    if scrButtonCheckPressed(global.suicideButton)
+    {
+        scrKillPlayer();
+    }
+}
+
+if global.adAlign &amp;&amp; place_meeting(x, y + global.grav, objBlock) &amp;&amp; !frozen  // A/D align
+{
+    if scrButtonCheckPressed(global.alignLeftButton)
+    {
+        hspeed -= 1;
+    }
+    if scrButtonCheckPressed(global.alignRightButton)
+    {
+        hspeed += 1;
+    }
 }
 
 
 //walljumps
 
-if (onVineL || onVineR)
+if vineDirection != 0
 {
-    if (onVineR)
-        xScale = -1;
-    else
-        xScale = 1;
+    xScale = -vineDirection;
     
     vspeed = 2 * global.grav;
     sprite_index = sprPlayerSliding;
-    image_speed = 1/2;
+    image_speed = 0.5;
     
     //pressed away from the vine
-    if (onVineL &amp;&amp; scrButtonCheckPressed(global.rightButton)) || (onVineR &amp;&amp; scrButtonCheckPressed(global.leftButton))
+    if (vineDirection == -1 &amp;&amp; scrButtonCheckPressed(global.rightButton)) || (vineDirection == 1 &amp;&amp; scrButtonCheckPressed(global.leftButton))
     {
         if (scrButtonCheck(global.jumpButton))  //jumping off vine
         {
-            if (onVineR)
-                hspeed = -15;
-            else
-                hspeed = 15;
-            
-            vspeed = -9 * global.grav;
+            hspeed = 15 * -vineDirection;
+            vspeed = 9 * -global.grav;
             audio_play_sound(sndWallJump,0,false);
             sprite_index = sprPlayerJump;
         }
         else    //moving off vine
         {
-            if (onVineR)
-                hspeed = -3;
-            else
-                hspeed = 3;
-            
+            hspeed = 3 * -vineDirection;
             sprite_index = sprPlayerFall;
         }
     }
@@ -318,7 +357,7 @@ if (onVineL || onVineR)
 
 //slopes
 
-if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
+if instance_exists(objSlope) &amp;&amp; hspeed != 0
 {
     var moveLimit = abs(hspeed);    //sets how high/low the player can go to snap onto a slope, this can be increased to make the player able to run over steeper slopes (ie setting it to abs(hspeed)*2 allows the player to run over slopes twice as steep)
     
@@ -328,7 +367,7 @@ if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
     var ySlope;
     
     //falling onto a slope
-    if (place_meeting(x+hspeed,y+vspeed+gravity,objSlope) &amp;&amp; (vspeed+gravity)*global.grav &gt; 0 &amp;&amp; notOnBlock)
+    if place_meeting(x+hspeed,y+vspeed+gravity,objSlope) &amp;&amp; (vspeed+gravity)*global.grav &gt; 0 &amp;&amp; !onBlock
     {
         var xLast = x;
         var yLast = y;
@@ -340,21 +379,25 @@ if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
         x += hspeed;
         hspeed = 0;
         
-        if(!place_free(x,y+vspeed))
+        if !place_free(x,y+vspeed)
         {
-            if (global.grav == 1)   //normal
+            if global.grav == 1
+            {
                 move_contact_solid(270,abs(vspeed));
-            else    //flipped
+            }
+            else
+            {
                 move_contact_solid(90,abs(vspeed));
+            }
             vspeed = 0;
         }
         
         y += vspeed;            
         
-        if (!place_free(x,y+(global.grav)) &amp;&amp; place_free(x,y))  //snapped onto the slope properly
+        if !place_free(x,y+(global.grav)) &amp;&amp; place_free(x,y)  //snapped onto the slope properly
         {
             djump = 1;
-            notOnBlock = false;
+            onBlock = true;
         }
         else    //did not snap onto the slope, return to previous position
         {
@@ -366,24 +409,24 @@ if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
     }
     
     //moving down a slope
-    if (!notOnBlock)
+    if onBlock
     {
-        var onSlope = (place_meeting(x,y+(global.grav),objSlope));    //treat normal blocks the same as slopes if we're standing on a slope
+        var onSlope = place_meeting(x,y+(global.grav),objSlope);    //treat normal blocks the same as slopes if we're standing on a slope
         
         slopeCheck = true;
         hTest = hspeed;
         
-        while (slopeCheck)
+        while slopeCheck
         {
             ySlope = 0;
             //check how far we should move down
-            while ((!place_meeting(x+hTest,y-ySlope+(global.grav),objSlope) || (onSlope &amp;&amp; !place_meeting(x+hTest,y-ySlope+(global.grav),objBlock))) &amp;&amp; ySlope*global.grav &gt; -floor(moveLimit*(hTest/hspeed)))
+            while (!place_meeting(x+hTest,y-ySlope+(global.grav),objSlope) || (onSlope &amp;&amp; !place_meeting(x+hTest,y-ySlope+(global.grav),objBlock))) &amp;&amp; ySlope*global.grav &gt; -floor(moveLimit*(hTest/hspeed))
             {
                 ySlope -= global.grav;
             }
             
             //check if we actually need to move down
-            if (place_meeting(x+hTest,y-ySlope+(global.grav),objSlope) || (onSlope &amp;&amp; place_meeting(x+hTest,y-ySlope+(global.grav),objBlock)))
+            if place_meeting(x+hTest,y-ySlope+(global.grav),objSlope) || (onSlope &amp;&amp; place_meeting(x+hTest,y-ySlope+(global.grav),objBlock))
             {
                 if (ySlope != 0 &amp;&amp; !place_meeting(x+hTest,y-ySlope,objBlock))
                 {
@@ -422,23 +465,23 @@ if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
     }
     
     //moving up a slope
-    if (place_meeting(x+hspeed,y,objSlope))
+    if place_meeting(x+hspeed,y,objSlope)
     {
         slopeCheck = true;
         hTest = hspeed;
         
-        while (slopeCheck)
+        while slopeCheck
         {
             ySlope = 0;
             
             //check how far we have to move up
-            while (place_meeting(x+hTest,y-ySlope,objSlope) &amp;&amp; ySlope*global.grav &lt; floor(moveLimit*(hTest/hspeed)))
+            while place_meeting(x+hTest,y-ySlope,objSlope) &amp;&amp; ySlope*global.grav &lt; floor(moveLimit*(hTest/hspeed))
             {
                 ySlope += global.grav;
             }
             
             //check if we actually need to move up
-            if (place_free(x+hTest,y-ySlope))
+            if place_free(x+hTest,y-ySlope)
             {            
                 y -= ySlope;
                 
@@ -449,17 +492,21 @@ if (instance_exists(objSlope) &amp;&amp; hspeed != 0)
             }
             else
             {
-                if (hTest &gt; 0)
+                if hTest &gt; 0
                 {
                     hTest -= 1;
-                    if (hTest &lt;= 0)
+                    if hTest &lt;= 0
+                    {
                         slopeCheck = false;
+                    }
                 }
-                else if (hTest &lt; 0)
+                else if hTest &lt; 0
                 {
                     hTest += 1;
-                    if (hTest &gt;= 0)
+                    if hTest &gt;= 0
+                    {
                         slopeCheck = false;
+                    }
                 }
                 else
                 {
